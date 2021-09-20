@@ -1,8 +1,10 @@
 package logger
 
 import (
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 )
@@ -23,45 +25,37 @@ func New(conf *Config) (*logrus.Entry, error) {
 	log := logrus.New()
 	if conf.JSONFormatter {
 		log.SetFormatter(&logrus.JSONFormatter{})
+	} else {
+		log.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
 	}
 	log.SetReportCaller(conf.ReportCaller)
-	err := setLevel(log, conf)
+	l, err := logrus.ParseLevel(conf.Level)
 	if err != nil {
 		return nil, err
 	}
-	err = setOutput(log, conf)
+	log.SetLevel(l)
+	w, err := output(conf.Output)
 	if err != nil {
 		return nil, err
 	}
+	log.SetOutput(w)
 	if conf.NoLock {
 		log.SetNoLock()
 	}
 	return logrus.NewEntry(log), nil
 }
 
-func setLevel(log *logrus.Logger, conf *Config) error {
-	lvl, err := logrus.ParseLevel(conf.Level)
-	if err != nil {
-		return err
+func output(s string) (io.Writer, error) {
+	switch strings.ToLower(s) {
+	case "", "stdout":
+		return os.Stdout, nil
+	case "stderr":
+		return os.Stderr, nil
 	}
-	log.SetLevel(lvl)
-	return nil
+	return file(s)
 }
 
-func setOutput(log *logrus.Logger, conf *Config) error {
-	if conf.Output == "" {
-		log.SetOutput(os.Stdout)
-		return nil
-	}
-	f, err := openFile(conf.Output)
-	if err != nil {
-		return err
-	}
-	log.SetOutput(f)
-	return nil
-}
-
-func openFile(path string) (*os.File, error) {
+func file(path string) (*os.File, error) {
 	if !filepath.IsAbs(path) {
 		exec, err := os.Executable()
 		if err != nil {
