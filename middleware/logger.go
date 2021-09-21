@@ -34,6 +34,7 @@ func WriteLog(withBody, withHeader bool) func(http.Handler) http.Handler {
 				"from":   r.RemoteAddr,
 				"url":    r.RequestURI,
 			}).Info("req")
+			next.ServeHTTP(w, r)
 		})
 	}
 }
