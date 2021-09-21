@@ -10,7 +10,9 @@ import (
 )
 
 func Standard() *logrus.Entry {
-	return logrus.NewEntry(logrus.StandardLogger())
+	conf := &Config{Level: "info"}
+	log, _ := New(conf)
+	return log
 }
 
 type Config struct {
