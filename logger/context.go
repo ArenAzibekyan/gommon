@@ -6,7 +6,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var ctxKey struct{}
+type ctxType struct{}
+
+var ctxKey ctxType
 
 func NewContext(ctx context.Context, log *logrus.Entry) context.Context {
 	if log == nil {
