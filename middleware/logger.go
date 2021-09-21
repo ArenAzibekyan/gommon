@@ -1,9 +1,9 @@
 package middleware
 
 import (
+	"bytes"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/ArenAzibekyan/gommon/logger"
 	"github.com/sirupsen/logrus"
@@ -40,12 +40,12 @@ func WriteLog(withBody, withHeader bool) func(http.Handler) http.Handler {
 }
 
 func bodyString(r *http.Request) string {
-	b := new(strings.Builder)
-	_, err := io.Copy(b, r.Body)
+	b, err := io.ReadAll(r.Body)
 	if err != nil {
 		return ""
 	}
-	return b.String()
+	r.Body = io.NopCloser(bytes.NewReader(b))
+	return string(b)
 }
 
 func headerFields(r *http.Request) logrus.Fields {
