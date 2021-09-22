@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 func Standard() *logrus.Entry {
@@ -47,26 +48,29 @@ func New(conf *Config) (*logrus.Entry, error) {
 	return logrus.NewEntry(log), nil
 }
 
-func output(s string) (io.Writer, error) {
-	switch strings.ToLower(s) {
+func output(path string) (io.Writer, error) {
+	switch strings.ToLower(path) {
 	case "", "stdout":
 		return os.Stdout, nil
 	case "stderr":
 		return os.Stderr, nil
 	}
-	return file(s)
-}
-
-func file(path string) (*os.File, error) {
-	if !filepath.IsAbs(path) {
-		exec, err := os.Executable()
-		if err != nil {
-			return nil, err
-		}
-		path = filepath.Join(filepath.Dir(exec), path)
-	}
-	if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
+	path, err := abs(path)
+	if err != nil {
 		return nil, err
 	}
-	return os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	w := &lumberjack.Logger{Filename: path}
+	return w, nil
+}
+
+func abs(path string) (string, error) {
+	if filepath.IsAbs(path) {
+		return path, nil
+	}
+	ex, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	path = filepath.Join(filepath.Dir(ex), path)
+	return path, nil
 }
