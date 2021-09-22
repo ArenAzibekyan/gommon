@@ -10,42 +10,50 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-func Standard() *logrus.Entry {
-	conf := &Config{Level: "info"}
-	log, _ := New(conf)
-	return log
-}
-
 type Config struct {
 	JSONFormatter bool
-	ReportCaller  bool
 	Level         string
 	Output        string
 	NoLock        bool
 }
 
 func New(conf *Config) (*logrus.Entry, error) {
-	log := logrus.New()
-	if conf.JSONFormatter {
-		log.SetFormatter(&logrus.JSONFormatter{})
-	} else {
-		log.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
-	}
-	log.SetReportCaller(conf.ReportCaller)
+	f := formatter(conf.JSONFormatter)
 	l, err := logrus.ParseLevel(conf.Level)
 	if err != nil {
 		return nil, err
 	}
-	log.SetLevel(l)
 	w, err := output(conf.Output)
 	if err != nil {
 		return nil, err
 	}
-	log.SetOutput(w)
+	log := new(f, l, w)
 	if conf.NoLock {
 		log.SetNoLock()
 	}
 	return logrus.NewEntry(log), nil
+}
+
+func Standard() *logrus.Entry {
+	log := new(formatter(false), logrus.DebugLevel, os.Stdout)
+	return logrus.NewEntry(log)
+}
+
+func new(f logrus.Formatter, l logrus.Level, w io.Writer) *logrus.Logger {
+	return &logrus.Logger{
+		Formatter: f,
+		Level:     l,
+		Out:       w,
+		Hooks:     make(logrus.LevelHooks),
+		ExitFunc:  os.Exit,
+	}
+}
+
+func formatter(json bool) logrus.Formatter {
+	if json {
+		return &logrus.JSONFormatter{}
+	}
+	return &logrus.TextFormatter{FullTimestamp: true}
 }
 
 func output(path string) (io.Writer, error) {
