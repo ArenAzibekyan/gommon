@@ -4,6 +4,8 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
 
 	"github.com/ArenAzibekyan/gommon/logger"
@@ -21,33 +23,37 @@ type Config struct {
 	Port uint16
 }
 
-type Server struct {
-	srv *http.Server
-	ctx context.Context
-	log *logrus.Entry
-}
-
-func New(ctx context.Context, conf *Config, handler http.Handler, log *logrus.Entry) *Server {
-	srv := &http.Server{
+func new(conf *Config, handler http.Handler) *http.Server {
+	return &http.Server{
 		Addr:    Addr("", conf.Port),
 		Handler: handler,
 	}
+}
+
+func start(serv *http.Server, log *logrus.Entry) {
 	if log == nil {
 		log = logger.Standard()
 	}
-	log = log.WithField("addr", srv.Addr)
-	return &Server{srv, ctx, log}
+	log = log.WithField("addr", serv.Addr)
+	log.Info("Starting HTTP server")
+	if err := serv.ListenAndServe(); err != http.ErrServerClosed {
+		log.Fatal(err)
+	}
 }
 
-func (s *Server) Start() {
-	go func() {
-		<-s.ctx.Done()
-		s.srv.Close()
-	}()
-	go func() {
-		s.log.Info("Starting to listen")
-		if err := s.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			s.log.Fatal(err)
-		}
-	}()
+func stop(ctx context.Context, serv *http.Server) {
+	<-ctx.Done()
+	serv.Close()
+}
+
+func StartContext(ctx context.Context, conf *Config, handler http.Handler, log *logrus.Entry) {
+	serv := new(conf, handler)
+	go stop(ctx, serv)
+	start(serv, log)
+}
+
+func Start(conf *Config, handler http.Handler, log *logrus.Entry) {
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+	defer cancel()
+	StartContext(ctx, conf, handler, log)
 }
