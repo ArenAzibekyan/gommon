@@ -35,7 +35,7 @@ func New(conf *Config) (*logrus.Entry, error) {
 }
 
 func Standard() *logrus.Entry {
-	log := new(formatter(false), logrus.DebugLevel, os.Stdout)
+	log := new(formatter(true), logrus.DebugLevel, os.Stdout)
 	return logrus.NewEntry(log)
 }
 

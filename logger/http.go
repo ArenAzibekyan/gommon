@@ -10,13 +10,13 @@ import (
 )
 
 const (
-	protoKey     = "Proto"
-	methodKey    = "Method"
-	fromKey      = "From"
-	urlKey       = "URL"
-	bodyKey      = "Body"
-	statusKey    = "Status"
-	headerPrefix = "Header-"
+	protoKey     = "proto"
+	methodKey    = "method"
+	fromKey      = "from"
+	urlKey       = "url"
+	bodyKey      = "body"
+	statusKey    = "status"
+	headerPrefix = "header-"
 )
 
 func HeaderFields(h http.Header) logrus.Fields {
